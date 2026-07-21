@@ -8,6 +8,9 @@
 - `requirements.txt` — зависимости
 - `env.example` — пример переменных окружения
 - `README.md` — документация
+- `DEPLOYMENT.md` — деплой через GitHub Actions + GHCR
+- `Dockerfile` — образ приложения
+- `.github/workflows/deploy.yml` — CI/CD pipeline
 
 ## Требования
 
@@ -50,23 +53,9 @@ docker run -d -p 8000:8000 --name time-server time-server-api
 
 ## CI/CD (GitHub Actions)
 
-Workflow: `.github/workflows/deploy.yml`
+Подробная инструкция: [DEPLOYMENT.md](DEPLOYMENT.md)
 
-1. Собирает Docker-образ и пушит в GitHub Container Registry (`ghcr.io`)
-2. По SSH подключается к серверу, тянет образ и запускает контейнер
-
-### Секреты репозитория
-
-| Секрет | Описание |
-|--------|----------|
-| `SSH_HOST` | Хост сервера |
-| `SSH_USER` | SSH-пользователь |
-| `SSH_PRIVATE_KEY` | Приватный SSH-ключ |
-| `SSH_PORT` | SSH-порт (необязательно, по умолчанию `22`) |
-| `GHCR_USERNAME` | GitHub-логин (или bot) для `docker login` на сервере |
-| `GHCR_TOKEN` | PAT с правом `read:packages` (для приватных образов) |
-
-На сервере должны быть установлены Docker и доступ к `ghcr.io`.
+Кратко: push в `main` → сборка образа → push в `ghcr.io` → SSH-деплой на сервер.
 
 ## Переменные окружения
 
