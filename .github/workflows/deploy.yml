@@ -56,32 +56,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to remote server
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Setup SSH key
         env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Пишем ключ как есть + гарантируем перевод строки в конце
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Проверка, что секрет — валидный OpenSSH private key
+          ssh-keygen -y -f ~/.ssh/deploy_key > ~/.ssh/deploy_key.pub
+          echo "Deploy key fingerprint:"
+          ssh-keygen -l -f ~/.ssh/deploy_key.pub
+
+          PORT="${SSH_PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy to remote server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
           IMAGE: ${{ needs.build-and-push.outputs.image }}
           GHCR_USER: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          envs: IMAGE,GHCR_USER,GHCR_TOKEN
-          script: |
-            set -e
+        run: |
+          set -euo pipefail
+          PORT="${SSH_PORT:-22}"
 
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          ssh -i ~/.ssh/deploy_key -p "$PORT" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            "${SSH_USER}@${SSH_HOST}" \
+            IMAGE="$IMAGE" GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" \
+            bash -s <<'EOF'
+          set -euo pipefail
 
-            docker pull "${IMAGE}:latest"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            docker stop time-server || true
-            docker rm time-server || true
+          docker pull "${IMAGE}:latest"
 
-            docker run -d \
-              --name time-server \
-              --restart unless-stopped \
-              -p 8000:8000 \
-              "${IMAGE}:latest"
+          docker stop time-server || true
+          docker rm time-server || true
 
-            docker image prune -f
+          docker run -d \
+            --name time-server \
+            --restart unless-stopped \
+            -p 8000:8000 \
+            "${IMAGE}:latest"
+
+          docker image prune -f
+          EOF
