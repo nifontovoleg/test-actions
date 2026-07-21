@@ -72,6 +72,7 @@ docker run -d -p 8000:8000 --name time-server time-server-api
 | GET   | `/`       | Приветствие и ссылка на docs |
 | GET   | `/time`   | Текущее время сервера   |
 | GET   | `/date`   | Текущая дата сервера    |
+| GET   | `/convert`| Конвертация UTC → часовой пояс |
 | GET   | `/health` | Health-check            |
 
 ### Пример ответа `/time`
@@ -95,5 +96,22 @@ docker run -d -p 8000:8000 --name time-server time-server-api
   "month": 7,
   "day": 21,
   "weekday": "Tuesday"
+}
+```
+
+### Пример `/convert`
+
+```text
+GET /convert?time=15:00&timezone=Екатеринбург
+```
+
+```json
+{
+  "input_time_utc": "15:00:00",
+  "timezone": "Екатеринбург",
+  "iana": "Asia/Yekaterinburg",
+  "converted_time": "20:00:00",
+  "converted_datetime": "2026-07-21T20:00:00+05:00",
+  "utc_offset": "+0500"
 }
 ```
