@@ -54,6 +54,9 @@ jobs:
     name: Deploy over SSH
     needs: build-and-push
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Setup SSH key
@@ -84,17 +87,23 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           IMAGE: ${{ needs.build-and-push.outputs.image }}
-          GHCR_USER: ${{ secrets.GHCR_USERNAME }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          # Для pull на сервере используем GITHUB_TOKEN этого job (packages:read)
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           PORT="${SSH_PORT:-22}"
+
+          if [ -z "${GHCR_TOKEN}" ]; then
+            echo "GHCR_TOKEN is empty"
+            exit 1
+          fi
 
           ssh -i ~/.ssh/deploy_key -p "$PORT" \
             -o IdentitiesOnly=yes \
             -o BatchMode=yes \
             "${SSH_USER}@${SSH_HOST}" \
-            IMAGE="$IMAGE" GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" \
+            env IMAGE="$IMAGE" GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" \
             bash -s <<'EOF'
           set -euo pipefail
 

@@ -55,15 +55,15 @@ Settings → Secrets and variables → Actions:
 | `SSH_PRIVATE_KEY` | да | Приватный ключ (полный PEM, включая `BEGIN/END`) |
 | `SSH_PASSPHRASE` | нет | Пароль ключа, если ключ защищён passphrase |
 | `SSH_PORT` | нет | SSH-порт, по умолчанию `22` |
-| `GHCR_USERNAME` | да | GitHub username для `docker login` на сервере |
-| `GHCR_TOKEN` | да | Personal Access Token с правом `read:packages` |
+| `GHCR_USERNAME` | нет* | Больше не обязателен: deploy тянет образ через `GITHUB_TOKEN` |
+| `GHCR_TOKEN` | нет* | Больше не обязателен: deploy тянет образ через `GITHUB_TOKEN` |
 
-### Как создать GHCR_TOKEN
+\* Секреты `GHCR_*` можно оставить, но текущий workflow их не использует.
 
-1. GitHub → Settings → Developer settings → Personal access tokens
-2. Создать token (classic) с scope `read:packages`
-3. Если пакет привязан к организации — убедиться, что token имеет к нему доступ
-4. Сохранить значение в секрет `GHCR_TOKEN`
+### Как создать GHCR_TOKEN (опционально)
+
+Текущий workflow для pull на сервере использует встроенный `GITHUB_TOKEN`.
+Отдельный PAT нужен только если будешь тянуть образ вручную с сервера.
 
 ### SSH-ключ
 
