@@ -11,7 +11,7 @@ load_dotenv()
 
 app = FastAPI(
     title="Time Server API",
-    description="Простое API для получения текущего времени сервера",
+    description="API времени сервера, даты и конвертации UTC → часовой пояс",
     version="1.0.0",
 )
 
