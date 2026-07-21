@@ -33,6 +33,19 @@ async def get_current_time() -> dict[str, str | float | None]:
     }
 
 
+@app.get("/date")
+async def get_current_date() -> dict[str, str | int]:
+    today = datetime.now().date()
+    return {
+        "date": today.isoformat(),
+        "formatted_date": today.strftime("%d.%m.%Y"),
+        "year": today.year,
+        "month": today.month,
+        "day": today.day,
+        "weekday": today.strftime("%A"),
+    }
+
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {

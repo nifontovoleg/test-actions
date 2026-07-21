@@ -4,7 +4,7 @@
 
 ## Структура
 
-- `main.py` — приложение с эндпоинтами `/`, `/time`, `/health`
+- `main.py` — приложение с эндпоинтами `/`, `/time`, `/date`, `/health`
 - `requirements.txt` — зависимости
 - `env.example` — пример переменных окружения
 - `README.md` — документация
@@ -62,6 +62,7 @@ docker run -d -p 8000:8000 --name time-server time-server-api
 |-------|-----------|-------------------------|
 | GET   | `/`       | Приветствие и ссылка на docs |
 | GET   | `/time`   | Текущее время сервера   |
+| GET   | `/date`   | Текущая дата сервера    |
 | GET   | `/health` | Health-check            |
 
 ### Пример ответа `/time`
@@ -72,5 +73,18 @@ docker run -d -p 8000:8000 --name time-server time-server-api
   "timestamp": 1753112220.123456,
   "formatted_time": "2026-07-21 20:17:00",
   "timezone": "UTC+05:00"
+}
+```
+
+### Пример ответа `/date`
+
+```json
+{
+  "date": "2026-07-21",
+  "formatted_date": "21.07.2026",
+  "year": 2026,
+  "month": 7,
+  "day": 21,
+  "weekday": "Tuesday"
 }
 ```
