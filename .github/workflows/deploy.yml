@@ -111,8 +111,13 @@ jobs:
 
           docker pull "${IMAGE}:latest"
 
-          docker stop time-server || true
-          docker rm time-server || true
+          # Снимаем старый контейнер и всё, что держит порт 8000
+          docker rm -f time-server || true
+          ids="$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(^|[ ,])0\.0\.0\.0:8000->|:8000->/ {print $1}')"
+          if [ -n "${ids}" ]; then
+            echo "Freeing port 8000 from containers: ${ids}"
+            docker rm -f ${ids}
+          fi
 
           docker run -d \
             --name time-server \
