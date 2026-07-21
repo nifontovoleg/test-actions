@@ -1,11 +1,11 @@
 # Deployment
 
-Деплой Time Server API через GitHub Actions: сборка Docker-образа → push в GHCR → SSH на сервер → pull и запуск контейнера.
+Deploy Time Server API with GitHub Actions: build a Docker image → push to GHCR → SSH to the server → pull and run the container.
 
-## Архитектура
+## Architecture
 
 ```text
-push в main / workflow_dispatch
+push to main / workflow_dispatch
         │
         ▼
 ┌─────────────────────┐
@@ -18,70 +18,70 @@ push в main / workflow_dispatch
           ▼
 ┌─────────────────────┐
 │  Job 2: deploy      │
-│  • SSH на сервер    │
+│  • SSH to server    │
 │  • docker login     │
 │  • pull + run       │
 └─────────────────────┘
 ```
 
-Workflow-файл: `.github/workflows/deploy.yml`
+Workflow file: `.github/workflows/deploy.yml`
 
-## Образ
+## Image
 
-| Параметр | Значение |
-|----------|----------|
+| Parameter | Value |
+|-----------|-------|
 | Registry | `ghcr.io` |
-| Имя | `ghcr.io/<owner>/<repo>` (lowercase) |
-| Теги | `latest`, `<commit-sha>` |
-| Контейнер на сервере | `time-server` |
-| Порт | `8000` |
+| Name | `ghcr.io/<owner>/<repo>` (lowercase) |
+| Tags | `latest`, `<commit-sha>` |
+| Container on server | `time-server` |
+| Port | `8000` |
 
-Пример: `ghcr.io/myuser/actions:latest`
+Example: `ghcr.io/myuser/actions:latest`
 
-## Требования к серверу
+## Server requirements
 
-- Docker установлен и доступен пользователю SSH
-- Открыт порт `8000` (или прокси перед контейнером)
-- Исходящий доступ к `ghcr.io`
+- Docker installed and available to the SSH user
+- Port `8000` open (or a reverse proxy in front)
+- Outbound access to `ghcr.io`
 
-## Секреты GitHub
+## GitHub secrets
 
 Settings → Secrets and variables → Actions:
 
-| Секрет | Обязательный | Описание |
-|--------|--------------|----------|
-| `SSH_HOST` | да | IP или hostname сервера |
-| `SSH_USER` | да | SSH-пользователь |
-| `SSH_PRIVATE_KEY` | да | Приватный ключ (полный PEM, включая `BEGIN/END`) |
-| `SSH_PASSPHRASE` | нет | Пароль ключа, если ключ защищён passphrase |
-| `SSH_PORT` | нет | SSH-порт, по умолчанию `22` |
-| `GHCR_USERNAME` | нет* | Больше не обязателен: deploy тянет образ через `GITHUB_TOKEN` |
-| `GHCR_TOKEN` | нет* | Больше не обязателен: deploy тянет образ через `GITHUB_TOKEN` |
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `SSH_HOST` | yes | Server IP or hostname |
+| `SSH_USER` | yes | SSH username |
+| `SSH_PRIVATE_KEY` | yes | Private key (full PEM, including `BEGIN/END`) |
+| `SSH_PASSPHRASE` | no | Key passphrase, if the key is encrypted |
+| `SSH_PORT` | no | SSH port, default `22` |
+| `GHCR_USERNAME` | no* | Not required: deploy pulls with `GITHUB_TOKEN` |
+| `GHCR_TOKEN` | no* | Not required: deploy pulls with `GITHUB_TOKEN` |
 
-\* Секреты `GHCR_*` можно оставить, но текущий workflow их не использует.
+\* You may keep `GHCR_*` secrets, but the current workflow does not use them.
 
-### Как создать GHCR_TOKEN (опционально)
+### Optional GHCR_TOKEN
 
-Текущий workflow для pull на сервере использует встроенный `GITHUB_TOKEN`.
-Отдельный PAT нужен только если будешь тянуть образ вручную с сервера.
+The workflow uses the built-in `GITHUB_TOKEN` for pull on the server.  
+A personal PAT is only needed if you pull the image manually outside Actions.
 
-### SSH-ключ
+### SSH key
 
-На сервере публичный ключ в `~/.ssh/authorized_keys`, приватный — в `SSH_PRIVATE_KEY`.
+Put the public key in `~/.ssh/authorized_keys` on the server. Put the private key in `SSH_PRIVATE_KEY`.
 
-## Запуск деплоя
+## Triggering a deploy
 
-Автоматически при push в ветку `main`, либо вручную:
+Runs automatically on push to `main`, or manually:
 
 Actions → **Build and Deploy** → **Run workflow**
 
-## Что делает деплой на сервере
+## What runs on the server
 
 ```bash
 docker login ghcr.io
 docker pull ghcr.io/<owner>/<repo>:latest
-docker stop time-server || true
-docker rm time-server || true
+docker rm -f time-server || true
+# also frees anything bound to port 8000
 docker run -d \
   --name time-server \
   --restart unless-stopped \
@@ -90,7 +90,7 @@ docker run -d \
 docker image prune -f
 ```
 
-## Проверка после деплоя
+## Verify after deploy
 
 ```bash
 curl http://<SSH_HOST>:8000/health
@@ -98,14 +98,14 @@ curl http://<SSH_HOST>:8000/time
 curl http://<SSH_HOST>:8000/date
 ```
 
-На сервере:
+On the server:
 
 ```bash
 docker ps --filter name=time-server
 docker logs time-server
 ```
 
-## Локальная сборка (без CI)
+## Local build (no CI)
 
 ```bash
 docker build -t time-server-api .
@@ -114,28 +114,28 @@ docker run -d --name time-server -p 8000:8000 time-server-api
 
 ## Troubleshooting
 
-| Проблема | Что проверить |
-|----------|----------------|
-| Push в GHCR падает с 403 | У workflow есть `packages: write`; репозиторий не блокирует packages |
-| Pull на сервере 401/403 | Верны `GHCR_USERNAME` / `GHCR_TOKEN`; у token есть `read:packages` |
-| `ssh: overflow reading version string` | На том хосте/порту **нет SSH**. Обычно неверный `SSH_HOST` или `SSH_PORT` (см. ниже) |
-| SSH timeout / connection refused | `SSH_HOST`, `SSH_PORT`, firewall, ключ в `authorized_keys` |
-| Порт занят | `docker ps`, другой процесс на `8000` |
-| Контейнер сразу падает | `docker logs time-server` |
+| Problem | Check |
+|---------|--------|
+| GHCR push fails with 403 | Workflow has `packages: write`; packages are allowed for the repo |
+| Pull on server returns 401/403 | Token / login path; package visibility |
+| `ssh: overflow reading version string` | That host/port is **not SSH**. Usually wrong `SSH_HOST` or `SSH_PORT` |
+| SSH timeout / connection refused | `SSH_HOST`, `SSH_PORT`, firewall, key in `authorized_keys` |
+| Port already allocated | `docker ps`, another process on `8000` |
+| Container exits immediately | `docker logs time-server` |
 
 ### `ssh: overflow reading version string`
 
-Клиент подключился, но ответ — не баннер SSH (часто HTTP/TLS с портов 80/443/8000).
+The client connected, but the response is not an SSH banner (often HTTP/TLS on ports 80/443/8000).
 
-Проверь секреты:
+Check secrets:
 
-| Секрет | Как должно быть | Как не должно |
-|--------|-----------------|---------------|
-| `SSH_HOST` | `203.0.113.10` или `vps.example.com` | `https://...`, `ssh://...`, URL с путём, IP от Cloudflare/прокси сайта |
-| `SSH_PORT` | `22` или свой SSH-порт (например `2222`) | `8000`, `80`, `443`, пусто с пробелами/переносами |
-| `SSH_USER` | `root` / `ubuntu` / и т.п. | email |
+| Secret | Should be | Should not be |
+|--------|-----------|---------------|
+| `SSH_HOST` | `203.0.113.10` or `vps.example.com` | `https://...`, `ssh://...`, URL with a path, Cloudflare/proxy IP of a website |
+| `SSH_PORT` | `22` or your custom SSH port (e.g. `2222`) | `8000`, `80`, `443`, empty with spaces/newlines |
+| `SSH_USER` | `root` / `ubuntu` / etc. | an email |
 
-Локальная проверка (с твоего ПК):
+Local check:
 
 ```bash
 ssh -i ./key -p 22 USER@HOST
@@ -143,32 +143,28 @@ ssh -i ./key -p 22 USER@HOST
 
 ### `unable to authenticate, attempted methods [none publickey]`
 
-Хост и порт ок, сервер отклонил ключ.
+Host and port are fine; the server rejected the key.
 
-Проверь по порядку:
+Check in order:
 
-1. **`SSH_USER`** — тот пользователь, для которого лежит ключ в `~/.ssh/authorized_keys` (часто `root` или `ubuntu`, не GitHub-логин).
-2. **`SSH_PRIVATE_KEY`** — именно **приватный** ключ целиком:
+1. **`SSH_USER`** — the Linux user that owns `~/.ssh/authorized_keys` (often `root` or `ubuntu`, not your GitHub login).
+2. **`SSH_PRIVATE_KEY`** — the full **private** key:
    ```text
    -----BEGIN OPENSSH PRIVATE KEY-----
    ...
    -----END OPENSSH PRIVATE KEY-----
    ```
-   или `BEGIN RSA PRIVATE KEY`. Не публичный (`.pub`), без кавычек вокруг, без лишних пробелов в начале строк.
-3. На сервере публичная пара должна быть в `authorized_keys`:
+   or `BEGIN RSA PRIVATE KEY`. Not the `.pub` file, no surrounding quotes, no leading spaces on lines.
+3. On the server, the matching public key must be in `authorized_keys`:
    ```bash
-   # на сервере, под тем же USER
    mkdir -p ~/.ssh
    chmod 700 ~/.ssh
    echo "ssh-ed25519 AAAA... comment" >> ~/.ssh/authorized_keys
    chmod 600 ~/.ssh/authorized_keys
    ```
-4. Если ключ с **passphrase** — добавь секрет `SSH_PASSPHRASE` и в workflow:
-   ```yaml
-   passphrase: ${{ secrets.SSH_PASSPHRASE }}
-   ```
-5. Локально тем же ключом и юзером:
+4. If the key has a **passphrase**, add secret `SSH_PASSPHRASE` (only if your workflow reads it).
+5. Test locally with the same key and user:
    ```bash
    ssh -i ./private_key -p 22 USER@HOST
    ```
-   Если локально не пускает — чини ключ/authorized_keys, не Actions.
+   If local login fails, fix the key / `authorized_keys` — not Actions.

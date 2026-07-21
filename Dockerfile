@@ -1,25 +1,25 @@
-# Используем официальный Python образ
+# Official Python image
 FROM python:3.11-slim
 
-# Устанавливаем рабочую директорию
+# Working directory
 WORKDIR /app
 
-# Копируем файл зависимостей
+# Dependency file
 COPY requirements.txt .
 
-# Устанавливаем зависимости
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем исходный код приложения
+# Application source
 COPY main.py .
 
-# Открываем порт
+# Expose HTTP port
 EXPOSE 8000
 
-# Устанавливаем переменные окружения по умолчанию
+# Default environment
 ENV HOST=0.0.0.0
 ENV PORT=8000
 ENV DEBUG=False
 
-# Команда запуска
+# Start command
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

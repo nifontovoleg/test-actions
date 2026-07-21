@@ -11,32 +11,51 @@ load_dotenv()
 
 app = FastAPI(
     title="Time Server API",
-    description="API времени сервера, даты и конвертации UTC → часовой пояс",
+    description="Server time, date, and UTC → timezone conversion API",
     version="1.0.0",
 )
 
-# Русские названия городов → IANA timezone
+# City aliases → IANA timezone (English + Russian)
 TIMEZONE_ALIASES: dict[str, str] = {
+    "yekaterinburg": "Asia/Yekaterinburg",
+    "ekaterinburg": "Asia/Yekaterinburg",
     "екатеринбург": "Asia/Yekaterinburg",
     "екб": "Asia/Yekaterinburg",
+    "moscow": "Europe/Moscow",
     "москва": "Europe/Moscow",
     "мск": "Europe/Moscow",
+    "saint petersburg": "Europe/Moscow",
+    "st petersburg": "Europe/Moscow",
     "санкт-петербург": "Europe/Moscow",
     "спб": "Europe/Moscow",
+    "novosibirsk": "Asia/Novosibirsk",
     "новосибирск": "Asia/Novosibirsk",
+    "krasnoyarsk": "Asia/Krasnoyarsk",
     "красноярск": "Asia/Krasnoyarsk",
+    "irkutsk": "Asia/Irkutsk",
     "иркутск": "Asia/Irkutsk",
+    "vladivostok": "Asia/Vladivostok",
     "владивосток": "Asia/Vladivostok",
+    "kaliningrad": "Europe/Kaliningrad",
     "калининград": "Europe/Kaliningrad",
+    "samara": "Europe/Samara",
     "самара": "Europe/Samara",
+    "omsk": "Asia/Omsk",
     "омск": "Asia/Omsk",
+    "yakutsk": "Asia/Yakutsk",
     "якутск": "Asia/Yakutsk",
+    "khabarovsk": "Asia/Vladivostok",
     "хабаровск": "Asia/Vladivostok",
     "utc": "UTC",
+    "london": "Europe/London",
     "лондон": "Europe/London",
+    "berlin": "Europe/Berlin",
     "берлин": "Europe/Berlin",
+    "paris": "Europe/Paris",
     "париж": "Europe/Paris",
+    "tokyo": "Asia/Tokyo",
     "токио": "Asia/Tokyo",
+    "new york": "America/New_York",
     "нью-йорк": "America/New_York",
 }
 
@@ -50,20 +69,20 @@ def resolve_timezone(name: str) -> ZoneInfo:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Неизвестный часовой пояс: {name!r}. "
-                "Укажите город (например Екатеринбург) или IANA-имя (Asia/Yekaterinburg)."
+                f"Unknown timezone: {name!r}. "
+                "Use a city name (e.g. Yekaterinburg) or an IANA id (Asia/Yekaterinburg)."
             ),
         ) from exc
 
 
 def parse_utc_time(value: str) -> datetime:
-    """Парсит время вроде 15.00, 15:00, 15:00:00 как сегодняшнюю дату в UTC."""
+    """Parse times like 15.00, 15:00, 15:00:00 as today's date in UTC."""
     raw = value.strip()
     match = re.fullmatch(r"(\d{1,2})[.:](\d{2})(?:[.:](\d{2}))?", raw)
     if not match:
         raise HTTPException(
             status_code=400,
-            detail="Неверный формат времени. Примеры: 15.00, 15:00, 15:00:00",
+            detail="Invalid time format. Examples: 15.00, 15:00, 15:00:00",
         )
 
     hour = int(match.group(1))
@@ -71,7 +90,7 @@ def parse_utc_time(value: str) -> datetime:
     second = int(match.group(3) or 0)
 
     if not (0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 59):
-        raise HTTPException(status_code=400, detail="Некорректные значения времени")
+        raise HTTPException(status_code=400, detail="Invalid time values")
 
     today = datetime.now(timezone.utc).date()
     return datetime(
@@ -88,7 +107,7 @@ def parse_utc_time(value: str) -> datetime:
 @app.get("/")
 async def root() -> dict[str, str]:
     return {
-        "message": "Добро пожаловать в Time Server API",
+        "message": "Welcome to Time Server API",
         "docs": "/docs",
     }
 
@@ -119,11 +138,11 @@ async def get_current_date() -> dict[str, str | int]:
 
 @app.get("/convert")
 async def convert_time(
-    time: str = Query(..., description="Время UTC, например 15.00 или 15:00"),
+    time: str = Query(..., description="UTC time, e.g. 15.00 or 15:00"),
     timezone_name: str = Query(
         ...,
         alias="timezone",
-        description="Часовой пояс: Екатеринбург или Asia/Yekaterinburg",
+        description="Timezone: Yekaterinburg or Asia/Yekaterinburg",
     ),
 ) -> dict[str, str]:
     utc_dt = parse_utc_time(time)

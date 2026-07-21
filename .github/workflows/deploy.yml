@@ -69,11 +69,11 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Пишем ключ как есть + гарантируем перевод строки в конце
+          # Write the key as-is and ensure a trailing newline
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Проверка, что секрет — валидный OpenSSH private key
+          # Validate that the secret is a valid OpenSSH private key
           ssh-keygen -y -f ~/.ssh/deploy_key > ~/.ssh/deploy_key.pub
           echo "Deploy key fingerprint:"
           ssh-keygen -l -f ~/.ssh/deploy_key.pub
@@ -87,7 +87,7 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           IMAGE: ${{ needs.build-and-push.outputs.image }}
-          # Для pull на сервере используем GITHUB_TOKEN этого job (packages:read)
+          # Pull on the server with this job's GITHUB_TOKEN (packages:read)
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -111,7 +111,7 @@ jobs:
 
           docker pull "${IMAGE}:latest"
 
-          # Снимаем старый контейнер и всё, что держит порт 8000
+          # Remove the old container and anything holding port 8000
           docker rm -f time-server || true
           ids="$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(^|[ ,])0\.0\.0\.0:8000->|:8000->/ {print $1}')"
           if [ -n "${ids}" ]; then

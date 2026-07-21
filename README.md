@@ -1,79 +1,79 @@
 # Time Server API
 
-Небольшой FastAPI-сервис: отдаёт время и дату сервера, конвертирует UTC в нужный часовой пояс и деплоится одной кнопкой через GitHub Actions → Docker → VPS.
+A small FastAPI service that returns server time and date, converts UTC to a target timezone, and deploys with one push via GitHub Actions → Docker → VPS.
 
-Подходит как учебный стенд CI/CD и как простой time-backend для ботов, фронтенда и внутренних скриптов.
-
----
-
-## Зачем этот проект
-
-| Задача | Как закрывает |
-|--------|----------------|
-| Узнать время/дату на сервере | `GET /time`, `GET /date` |
-| Перевести UTC → город/пояс | `GET /convert` |
-| Проверить, что сервис жив | `GET /health` |
-| Научиться деплоить API | Docker + GHCR + SSH в [DEPLOYMENT.md](DEPLOYMENT.md) |
-
-Это не «ещё одни мировые часы», а **понятный каркас**: минимальный бэкенд + контейнер + автоматический выкат на сервер. На нём удобно отрабатывать пайплайн и потом наращивать фичи.
+Use it as a CI/CD learning sandbox or as a lightweight time backend for bots, frontends, and internal scripts.
 
 ---
 
-## Для кого
+## Why this project
 
-- **Разработчики**, которым нужен простой time-API без лишней инфраструктуры
-- **Те, кто изучает FastAPI / Docker / GitHub Actions** — от кода до продакшен-деплоя
-- **Авторы Telegram-ботов и мини-приложений**, где нужна серверная дата/конвертация поясов
-- **Команды**, которым нужен эталон «push в main → контейнер на VPS»
+| Goal | How it helps |
+|------|----------------|
+| Get server time / date | `GET /time`, `GET /date` |
+| Convert UTC → city / timezone | `GET /convert` |
+| Check that the service is up | `GET /health` |
+| Learn end-to-end API deploy | Docker + GHCR + SSH — see [DEPLOYMENT.md](DEPLOYMENT.md) |
+
+This is not “yet another world clock”. It is a **clear scaffold**: minimal backend + container + automatic VPS rollout. Perfect for practicing the pipeline, then growing features on top.
 
 ---
 
-## Как применять
+## Who it is for
 
-### В учебных целях
-Склонировал → поднял локально → посмотрел Swagger → запушил в `main` → увидел контейнер на сервере. Весь путь от кода до продакшена в одном репозитории.
+- **Developers** who need a simple time API without heavy infrastructure
+- **People learning FastAPI / Docker / GitHub Actions** — from code to production
+- **Bot and mini-app authors** who need server-side date/time and timezone conversion
+- **Teams** that want a reference flow: push to `main` → container on a VPS
 
-### Как микросервис
-Дёрни HTTP из бота, фронта или cron:
+---
+
+## How to use it
+
+### As a learning project
+Clone → run locally → open Swagger → push to `main` → see the container on the server. The full path from code to production lives in one repo.
+
+### As a microservice
+Call it over HTTP from a bot, frontend, or cron:
 
 ```text
 GET /time
 GET /date
-GET /convert?time=15.00&timezone=Екатеринбург
+GET /convert?time=15.00&timezone=Yekaterinburg
 GET /health
 ```
 
-### Как шаблон деплоя
-Скопируй `Dockerfile` + `.github/workflows/deploy.yml`, подставь свои секреты — и тот же пайплайн заработает для другого FastAPI-приложения.
+### As a deploy template
+Copy `Dockerfile` + `.github/workflows/deploy.yml`, set your secrets — the same pipeline works for another FastAPI app.
 
-### Живой стенд (пример)
-После деплоя API доступен на VPS, например:
+### Live stand (example)
+After deploy the API is available on the VPS:
 
 - Health: `http://<HOST>:8000/health`
 - Docs: `http://<HOST>:8000/docs`
 
 ---
 
-## Возможности
+## Features
 
-- Время сервера в ISO, unix timestamp и человекочитаемом виде
-- Дата с разбивкой по year/month/day и днём недели
-- Конвертация **UTC → часовой пояс** (город по-русски или IANA-имя)
-- Health-check для мониторинга и балансировщиков
-- Docker-образ из одного `Dockerfile`
-- CI/CD: сборка → GHCR → SSH-деплой
+- Server time as ISO, Unix timestamp, and human-readable string
+- Date with year / month / day and weekday
+- **UTC → timezone** conversion (city alias or IANA name)
+- Health check for monitoring and load balancers
+- Single-file Docker image
+- CI/CD: build → GHCR → SSH deploy
 
 ---
 
-## Быстрый старт
+## Quick start
 
-### Требования
+### Requirements
 
 - Python **3.11+**
-- (опционально) Docker
-- (для деплоя) GitHub-репозиторий и VPS с Docker
+- Docker (optional)
+- GitHub repo + VPS with Docker (for deploy)
 
-### Установка
+### Install
 
 ```powershell
 git clone https://github.com/nifontovoleg/test-actions.git
@@ -84,32 +84,32 @@ pip install -r requirements.txt
 copy env.example .env
 ```
 
-### Запуск локально
+### Run locally
 
 ```powershell
 python main.py
 ```
 
-или:
+or:
 
 ```powershell
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-| Что | URL |
-|-----|-----|
+| What | URL |
+|------|-----|
 | API | http://127.0.0.1:8000 |
 | Swagger | http://127.0.0.1:8000/docs |
 | ReDoc | http://127.0.0.1:8000/redoc |
 
-### Запуск в Docker
+### Run with Docker
 
 ```powershell
 docker build -t time-server-api .
 docker run -d --name time-server -p 8000:8000 time-server-api
 ```
 
-Проверка:
+Smoke test:
 
 ```powershell
 curl http://127.0.0.1:8000/health
@@ -117,42 +117,42 @@ curl http://127.0.0.1:8000/health
 
 ---
 
-## Структура репозитория
+## Repository layout
 
 ```text
 .
-├── main.py                      # FastAPI-приложение
-├── requirements.txt             # зависимости
-├── env.example                  # пример переменных окружения
-├── Dockerfile                   # образ приложения
+├── main.py                      # FastAPI application
+├── requirements.txt             # dependencies
+├── env.example                  # sample environment variables
+├── Dockerfile                   # application image
 ├── .dockerignore
 ├── .gitignore
-├── README.md                    # этот файл
-├── DEPLOYMENT.md                # деплой и секреты
+├── README.md                    # this file
+├── DEPLOYMENT.md                # deploy guide and secrets
 └── .github/workflows/deploy.yml # CI/CD: build → GHCR → SSH
 ```
 
-| Файл | Роль |
+| File | Role |
 |------|------|
-| `main.py` | Эндпоинты и бизнес-логика времени |
-| `DEPLOYMENT.md` | Секреты, SSH, GHCR, troubleshooting |
-| `deploy.yml` | Две джобы: сборка образа и выкат на сервер |
+| `main.py` | Endpoints and time logic |
+| `DEPLOYMENT.md` | Secrets, SSH, GHCR, troubleshooting |
+| `deploy.yml` | Two jobs: image build and VPS deploy |
 
 ---
 
 ## API
 
-Базовый префикс: `/`
+Base path: `/`
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| `GET` | `/` | Приветствие и ссылка на docs |
-| `GET` | `/time` | Текущее время сервера |
-| `GET` | `/date` | Текущая дата сервера |
-| `GET` | `/convert` | Конвертация времени из UTC |
-| `GET` | `/health` | Статус сервиса |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Welcome message and docs link |
+| `GET` | `/time` | Current server time |
+| `GET` | `/date` | Current server date |
+| `GET` | `/convert` | Convert time from UTC |
+| `GET` | `/health` | Service status |
 
-Интерактивная документация всегда здесь: [`/docs`](http://127.0.0.1:8000/docs).
+Interactive docs: [`/docs`](http://127.0.0.1:8000/docs).
 
 ### `GET /time`
 
@@ -180,15 +180,15 @@ curl http://127.0.0.1:8000/health
 
 ### `GET /convert`
 
-Переводит время из **UTC** в указанный пояс.
+Converts **UTC** time into the target timezone.
 
-| Параметр | Пример | Описание |
-|----------|--------|----------|
-| `time` | `15.00` | Время UTC (`15.00`, `15:00`, `15:00:00`) |
-| `timezone` | `Екатеринбург` | Город или IANA (`Asia/Yekaterinburg`) |
+| Parameter | Example | Description |
+|-----------|---------|-------------|
+| `time` | `15.00` | UTC time (`15.00`, `15:00`, `15:00:00`) |
+| `timezone` | `Yekaterinburg` | City alias or IANA (`Asia/Yekaterinburg`) |
 
 ```text
-GET /convert?time=15.00&timezone=Екатеринбург
+GET /convert?time=15.00&timezone=Yekaterinburg
 ```
 
 ```json
@@ -200,10 +200,10 @@ GET /convert?time=15.00&timezone=Екатеринбург
 }
 ```
 
-Логика: `15:00 UTC` + Екатеринбург (`UTC+5`) → `20:00`.
+Logic: `15:00 UTC` + Yekaterinburg (`UTC+5`) → `20:00`.
 
-Поддерживаемые алиасы городов (часть списка):  
-Екатеринбург, Москва, СПб, Новосибирск, Красноярск, Владивосток, Лондон, Берлин, Токио, Нью-Йорк — либо любое валидное IANA-имя.
+City aliases include (partial list):  
+Yekaterinburg, Moscow, Saint Petersburg, Novosibirsk, Krasnoyarsk, Vladivostok, London, Berlin, Tokyo, New York — or any valid IANA name. Russian aliases (e.g. `Екатеринбург`) still work.
 
 ### `GET /health`
 
@@ -216,108 +216,108 @@ GET /convert?time=15.00&timezone=Екатеринбург
 
 ---
 
-## Переменные окружения
+## Environment variables
 
-Скопируй `env.example` → `.env`:
+Copy `env.example` → `.env`:
 
-| Переменная | По умолчанию | Описание |
-|------------|--------------|----------|
-| `HOST` | `0.0.0.0` | Интерфейс прослушивания |
-| `PORT` | `8000` | Порт |
-| `DEBUG` | `false` | `true` включает reload у uvicorn |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST` | `0.0.0.0` | Bind address |
+| `PORT` | `8000` | Port |
+| `DEBUG` | `false` | `true` enables uvicorn reload |
 
-`.env` в git не коммитится.
+`.env` is not committed to git.
 
 ---
 
-## CI/CD и деплой
+## CI/CD and deploy
 
-Краткий путь:
+Short path:
 
 ```text
-push в main
+push to main
    → Docker build
-   → push в ghcr.io/<owner>/<repo>
-   → SSH на VPS
-   → docker pull + run (контейнер time-server, порт 8000)
+   → push to ghcr.io/<owner>/<repo>
+   → SSH to VPS
+   → docker pull + run (container time-server, port 8000)
 ```
 
-Подробно (секреты, SSH-ключ, GHCR, ошибки): **[DEPLOYMENT.md](DEPLOYMENT.md)**
+Full guide (secrets, SSH key, GHCR, errors): **[DEPLOYMENT.md](DEPLOYMENT.md)**
 
-Нужные секреты репозитория: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` (+ опционально `SSH_PORT`).
-
----
-
-## Как развивать проект
-
-Идеи по приоритету — от простого к серьёзному:
-
-### Ближайшие улучшения
-1. **Больше поясов** — расширить словарь городов или отдать список через `GET /timezones`
-2. **Дата в `/convert`** — принимать не только время, но и полную дату (`2026-07-21T15:00`)
-3. **Обратная конвертация** — из локального пояса обратно в UTC
-4. **Тесты** — `pytest` + `httpx`/`TestClient` на `/time`, `/date`, `/convert`
-5. **Линтеры в CI** — ruff / mypy отдельной job перед деплоем
-
-### Продуктовые направления
-- Rate limit и простой API-key для публичного стенда
-- Метрики (`/metrics`) и алерты по `/health`
-- Nginx/Caddy + HTTPS перед контейнером
-- Версионирование API (`/api/v1/...`)
-- Отдача времени для нескольких серверов/регионов сразу
-
-### Инфраструктура
-- Staging-окружение (деплой с `develop`)
-- Откат на предыдущий SHA-тег образа
-- docker compose для локальной связки api + reverse-proxy
-
-Паттерн развития: **сначала стабильный контракт API и тесты**, потом обвязка (auth, https, мониторинг).
+Required repository secrets: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` (+ optional `SSH_PORT`).
 
 ---
 
-## Примеры запросов
+## How to grow the project
+
+Ideas from simple to serious:
+
+### Near-term improvements
+1. **More timezones** — expand the city map or expose `GET /timezones`
+2. **Full datetime in `/convert`** — accept `2026-07-21T15:00`, not only time-of-day
+3. **Reverse conversion** — local timezone → UTC
+4. **Tests** — `pytest` + `httpx` / `TestClient` for `/time`, `/date`, `/convert`
+5. **Linters in CI** — ruff / mypy job before deploy
+
+### Product directions
+- Rate limit and a simple API key for a public stand
+- Metrics (`/metrics`) and alerts on `/health`
+- Nginx/Caddy + HTTPS in front of the container
+- API versioning (`/api/v1/...`)
+- Time for multiple regions in one response
+
+### Infrastructure
+- Staging environment (deploy from `develop`)
+- Rollback to a previous image SHA tag
+- docker compose for local api + reverse-proxy
+
+Growth pattern: **stabilize the API contract and tests first**, then add auth, HTTPS, and monitoring.
+
+---
+
+## Request examples
 
 ```powershell
-# локально
+# local
 curl http://127.0.0.1:8000/time
 curl http://127.0.0.1:8000/date
-curl "http://127.0.0.1:8000/convert?time=15.00&timezone=Екатеринбург"
+curl "http://127.0.0.1:8000/convert?time=15.00&timezone=Yekaterinburg"
 curl http://127.0.0.1:8000/health
 ```
 
 ```powershell
-# с Python
+# Python
 python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/time').read().decode())"
 ```
 
 ---
 
-## Стек
+## Stack
 
-| Слой | Технологии |
-|------|------------|
+| Layer | Tech |
+|-------|------|
 | API | Python 3.11+, FastAPI, Uvicorn |
-| Время | `datetime`, `zoneinfo` |
-| Конфиг | `python-dotenv` |
-| Контейнер | Docker (`python:3.11-slim`) |
+| Time | `datetime`, `zoneinfo` |
+| Config | `python-dotenv` |
+| Container | Docker (`python:3.11-slim`) |
 | CI/CD | GitHub Actions, GHCR, SSH deploy |
 
 ---
 
-## Лицензия и вклад
+## Contributing
 
-Учебно-практический репозиторий. Можно форкать, менять под себя, забирать workflow деплоя.
+This is a practical learning repository. Fork it, adapt it, reuse the deploy workflow.
 
-Если добавляешь фичу:
-1. ветка от `main`
-2. правки + обновление README при изменении API
-3. PR или merge в `main` → автоматический деплой
+When you add a feature:
+1. Branch from `main`
+2. Update the README if the API changes
+3. PR or merge into `main` → automatic deploy
 
 ---
 
-## Полезные ссылки
+## Useful links
 
-- [DEPLOYMENT.md](DEPLOYMENT.md) — деплой, секреты, troubleshooting
+- [DEPLOYMENT.md](DEPLOYMENT.md) — deploy, secrets, troubleshooting
 - Swagger UI — `/docs`
 - FastAPI — https://fastapi.tiangolo.com/
 - GitHub Container Registry — https://docs.github.com/packages/learn-github-packages
