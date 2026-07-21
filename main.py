@@ -15,41 +15,29 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Названия городов/поясов → IANA timezone
+# Русские названия городов → IANA timezone
 TIMEZONE_ALIASES: dict[str, str] = {
-    "utc": "UTC",
-    "gmt": "UTC",
-    "москва": "Europe/Moscow",
-    "moscow": "Europe/Moscow",
     "екатеринбург": "Asia/Yekaterinburg",
     "екб": "Asia/Yekaterinburg",
-    "yekaterinburg": "Asia/Yekaterinburg",
-    "ekaterinburg": "Asia/Yekaterinburg",
+    "москва": "Europe/Moscow",
+    "мск": "Europe/Moscow",
+    "санкт-петербург": "Europe/Moscow",
+    "спб": "Europe/Moscow",
     "новосибирск": "Asia/Novosibirsk",
-    "novosibirsk": "Asia/Novosibirsk",
     "красноярск": "Asia/Krasnoyarsk",
-    "krasnoyarsk": "Asia/Krasnoyarsk",
     "иркутск": "Asia/Irkutsk",
-    "irkutsk": "Asia/Irkutsk",
     "владивосток": "Asia/Vladivostok",
-    "vladivostok": "Asia/Vladivostok",
     "калининград": "Europe/Kaliningrad",
-    "kaliningrad": "Europe/Kaliningrad",
     "самара": "Europe/Samara",
-    "samara": "Europe/Samara",
     "омск": "Asia/Omsk",
-    "omsk": "Asia/Omsk",
-    "камчатка": "Asia/Kamchatka",
-    "kamchatka": "Asia/Kamchatka",
+    "якутск": "Asia/Yakutsk",
+    "хабаровск": "Asia/Vladivostok",
+    "utc": "UTC",
     "лондон": "Europe/London",
-    "london": "Europe/London",
     "берлин": "Europe/Berlin",
-    "berlin": "Europe/Berlin",
+    "париж": "Europe/Paris",
     "токио": "Asia/Tokyo",
-    "tokyo": "Asia/Tokyo",
     "нью-йорк": "America/New_York",
-    "new-york": "America/New_York",
-    "new_york": "America/New_York",
 }
 
 
@@ -63,52 +51,37 @@ def resolve_timezone(name: str) -> ZoneInfo:
             status_code=400,
             detail=(
                 f"Неизвестный часовой пояс: {name!r}. "
-                "Примеры: Екатеринбург, Москва, UTC, Asia/Yekaterinburg"
+                "Укажите город (например Екатеринбург) или IANA-имя (Asia/Yekaterinburg)."
             ),
         ) from exc
 
 
 def parse_utc_time(value: str) -> datetime:
-    """Парсит время UTC из строки: 15:00, 15.00, 15:00:00, ISO datetime."""
+    """Парсит время вроде 15.00, 15:00, 15:00:00 как сегодняшнюю дату в UTC."""
     raw = value.strip()
-
-    # ISO / datetime
-    for fmt in (
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%dT%H:%M",
-        "%Y-%m-%d %H:%M",
-    ):
-        try:
-            return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
-        except ValueError:
-            pass
-
-    # 15:00 / 15.00 / 15:00:00 / 15.00.00
-    match = re.fullmatch(
-        r"(?P<h>\d{1,2})[:.](?P<m>\d{2})(?:[:.](?P<s>\d{2}))?",
-        raw,
-    )
-    if match:
-        hour = int(match.group("h"))
-        minute = int(match.group("m"))
-        second = int(match.group("s") or 0)
-        if not (0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 59):
-            raise HTTPException(status_code=400, detail=f"Некорректное время: {value!r}")
-        today = datetime.now(timezone.utc).date()
-        return datetime(
-            today.year,
-            today.month,
-            today.day,
-            hour,
-            minute,
-            second,
-            tzinfo=timezone.utc,
+    match = re.fullmatch(r"(\d{1,2})[.:](\d{2})(?:[.:](\d{2}))?", raw)
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail="Неверный формат времени. Примеры: 15.00, 15:00, 15:00:00",
         )
 
-    raise HTTPException(
-        status_code=400,
-        detail=f"Не удалось разобрать время: {value!r}. Примеры: 15:00, 15.00, 2026-07-21T15:00:00",
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    second = int(match.group(3) or 0)
+
+    if not (0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 59):
+        raise HTTPException(status_code=400, detail="Некорректные значения времени")
+
+    today = datetime.now(timezone.utc).date()
+    return datetime(
+        today.year,
+        today.month,
+        today.day,
+        hour,
+        minute,
+        second,
+        tzinfo=timezone.utc,
     )
 
 
@@ -145,12 +118,12 @@ async def get_current_date() -> dict[str, str | int]:
 
 
 @app.get("/convert")
-async def convert_timezone(
-    time: str = Query(..., description="Время в UTC, например 15:00 или 15.00"),
+async def convert_time(
+    time: str = Query(..., description="Время UTC, например 15.00 или 15:00"),
     timezone_name: str = Query(
         ...,
         alias="timezone",
-        description="Часовой пояс: Екатеринбург, Москва или Asia/Yekaterinburg",
+        description="Часовой пояс: Екатеринбург или Asia/Yekaterinburg",
     ),
 ) -> dict[str, str]:
     utc_dt = parse_utc_time(time)
@@ -159,11 +132,9 @@ async def convert_timezone(
 
     return {
         "input_time_utc": utc_dt.strftime("%H:%M:%S"),
-        "timezone": timezone_name,
-        "iana": str(tz),
+        "timezone": str(tz),
         "converted_time": local_dt.strftime("%H:%M:%S"),
         "converted_datetime": local_dt.isoformat(),
-        "utc_offset": local_dt.strftime("%z"),
     }
 
 

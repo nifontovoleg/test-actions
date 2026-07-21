@@ -102,16 +102,14 @@ docker run -d -p 8000:8000 --name time-server time-server-api
 ### Пример `/convert`
 
 ```text
-GET /convert?time=15:00&timezone=Екатеринбург
+GET /convert?time=15.00&timezone=Екатеринбург
 ```
 
 ```json
 {
   "input_time_utc": "15:00:00",
-  "timezone": "Екатеринбург",
-  "iana": "Asia/Yekaterinburg",
+  "timezone": "Asia/Yekaterinburg",
   "converted_time": "20:00:00",
-  "converted_datetime": "2026-07-21T20:00:00+05:00",
-  "utc_offset": "+0500"
+  "converted_datetime": "2026-07-21T20:00:00+05:00"
 }
 ```
