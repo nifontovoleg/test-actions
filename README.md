@@ -32,8 +32,21 @@ python main.py
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- Сервер: http://127.0.0.1:8000
-- Swagger: http://127.0.0.1:8000/docs
+### Docker
+
+```powershell
+# Сборка образа
+docker build -t time-server-api .
+
+# Запуск контейнера
+docker run -p 8000:8000 time-server-api
+
+# Запуск в фоне
+docker run -d -p 8000:8000 --name time-server time-server-api
+```
+
+- Сервер: http://localhost:8000
+- Swagger: http://localhost:8000/docs
 
 ## Переменные окружения
 
